@@ -66,17 +66,17 @@ export async function analyticsRoutes(app: FastifyInstance) {
               current: z.object({
                 totalServices: z.number(),
                 completedServices: z.number(),
-                openServices: z.number(),
+                averageResolutionMinutes: z.number(),
               }),
               previous: z.object({
                 totalServices: z.number(),
                 completedServices: z.number(),
-                openServices: z.number(),
+                averageResolutionMinutes: z.number(),
               }),
               variation: z.object({
                 totalServices: z.number(),
                 completedServices: z.number(),
-                openServices: z.number(),
+                averageResolutionMinutes: z.number(),
               }),
             }),
           }),
@@ -102,35 +102,47 @@ export async function analyticsRoutes(app: FastifyInstance) {
         ...(agentId === 'all' ? {} : { agentId }),
       }
 
-      const [currentTotal, currentCompleted, currentOpen, previousTotal, previousCompleted, previousOpen] =
-        await Promise.all([
-          prisma.services.count({ where: currentWhere }),
-          prisma.services.count({
-            where: {
-              ...currentWhere,
-              status: 'COMPLETED',
-            },
-          }),
-          prisma.services.count({
-            where: {
-              ...currentWhere,
-              status: 'OPEN',
-            },
-          }),
-          prisma.services.count({ where: previousWhere }),
-          prisma.services.count({
-            where: {
-              ...previousWhere,
-              status: 'COMPLETED',
-            },
-          }),
-          prisma.services.count({
-            where: {
-              ...previousWhere,
-              status: 'OPEN',
-            },
-          }),
-        ])
+      const agentFilter = getAgentFilter(agentId)
+
+      const [
+        currentTotal,
+        currentCompleted,
+        previousTotal,
+        previousCompleted,
+        currentAvgTimeRows,
+        previousAvgTimeRows,
+      ] = await Promise.all([
+        prisma.services.count({ where: currentWhere }),
+        prisma.services.count({
+          where: {
+            ...currentWhere,
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.services.count({ where: previousWhere }),
+        prisma.services.count({
+          where: {
+            ...previousWhere,
+            status: 'COMPLETED',
+          },
+        }),
+        prisma.$queryRaw<Array<{ avg_minutes: number | null }>>(Prisma.sql`
+          SELECT ROUND(COALESCE(AVG(EXTRACT(EPOCH FROM (s.finished_at - s.created_at)) / 60), 0), 2)::float AS avg_minutes
+          FROM services s
+          WHERE s.created_at >= ${start}
+            AND s.created_at < ${end}
+            AND s.finished_at IS NOT NULL
+            ${agentFilter}
+        `),
+        prisma.$queryRaw<Array<{ avg_minutes: number | null }>>(Prisma.sql`
+          SELECT ROUND(COALESCE(AVG(EXTRACT(EPOCH FROM (s.finished_at - s.created_at)) / 60), 0), 2)::float AS avg_minutes
+          FROM services s
+          WHERE s.created_at >= ${previousStart}
+            AND s.created_at < ${previousEnd}
+            AND s.finished_at IS NOT NULL
+            ${agentFilter}
+        `),
+      ])
 
       const calcVariation = (current: number, previous: number) => {
         if (previous === 0) {
@@ -140,6 +152,13 @@ export async function analyticsRoutes(app: FastifyInstance) {
         return Number((((current - previous) / previous) * 100).toFixed(2))
       }
 
+      const currentAverageResolutionMinutes = Number(
+        currentAvgTimeRows[0]?.avg_minutes ?? 0
+      )
+      const previousAverageResolutionMinutes = Number(
+        previousAvgTimeRows[0]?.avg_minutes ?? 0
+      )
+
       return reply.status(200).send({
         period: { year, month },
         filter: { agentId },
@@ -147,17 +166,20 @@ export async function analyticsRoutes(app: FastifyInstance) {
           current: {
             totalServices: currentTotal,
             completedServices: currentCompleted,
-            openServices: currentOpen,
+            averageResolutionMinutes: currentAverageResolutionMinutes,
           },
           previous: {
             totalServices: previousTotal,
             completedServices: previousCompleted,
-            openServices: previousOpen,
+            averageResolutionMinutes: previousAverageResolutionMinutes,
           },
           variation: {
             totalServices: calcVariation(currentTotal, previousTotal),
             completedServices: calcVariation(currentCompleted, previousCompleted),
-            openServices: calcVariation(currentOpen, previousOpen),
+            averageResolutionMinutes: calcVariation(
+              currentAverageResolutionMinutes,
+              previousAverageResolutionMinutes
+            ),
           },
         },
       })
