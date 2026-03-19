@@ -39,7 +39,7 @@ function getAgentFilter(agentId: string) {
     return Prisma.empty
   }
 
-  return Prisma.sql`AND s.agent_id = ${agentId}::uuid`
+  return Prisma.sql`AND s.agent_id = ${agentId}`
 }
 
 export async function analyticsRoutes(app: FastifyInstance) {
