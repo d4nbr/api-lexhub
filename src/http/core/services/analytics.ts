@@ -6,9 +6,14 @@ import { auth } from 'http/middlewares/auth'
 import { prisma } from 'lib/prisma'
 import z from 'zod'
 
+const monthQuerySchema = z.union([
+  z.literal('all'),
+  z.coerce.number().int().min(1).max(12),
+])
+
 const analyticsQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
-  month: z.coerce.number().int().min(1).max(12),
+  month: monthQuerySchema,
   agentId: z.union([z.literal('all'), z.string().uuid()]).default('all'),
 })
 
@@ -18,11 +23,21 @@ const timeseriesQuerySchema = analyticsQuerySchema.extend({
 
 const topAgentsQuerySchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
-  month: z.coerce.number().int().min(1).max(12),
+  month: monthQuerySchema,
   limit: z.coerce.number().int().min(1).max(50).default(10),
 })
 
-function getPeriodRange(year: number, month: number) {
+function getPeriodRange(year: number, month: number | 'all') {
+  if (month === 'all') {
+    const start = dayjs(`${year}-01-01`).startOf('year').toDate()
+    const end = dayjs(start).add(1, 'year').toDate()
+
+    const previousStart = dayjs(start).subtract(1, 'year').toDate()
+    const previousEnd = start
+
+    return { start, end, previousStart, previousEnd }
+  }
+
   const start = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
     .startOf('month')
     .toDate()
@@ -57,7 +72,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
           200: z.object({
             period: z.object({
               year: z.number(),
-              month: z.number(),
+              month: z.union([z.literal('all'), z.number()]),
             }),
             filter: z.object({
               agentId: z.union([z.literal('all'), z.string().uuid()]),
@@ -210,7 +225,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       const { year, month, agentId, groupBy } = request.query
       const { start, end } = getPeriodRange(year, month)
       const agentFilter = getAgentFilter(agentId)
-      const groupByFn = groupBy === 'month' ? 'month' : 'day'
+      const effectiveGroupBy = month === 'all' ? 'month' : groupBy
+      const groupByFn = effectiveGroupBy === 'month' ? 'month' : 'day'
 
       const rows = await prisma.$queryRaw<
         Array<{ bucket: Date; total_services: number }>
@@ -228,7 +244,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
 
       return reply.status(200).send(
         rows.map(row => ({
-          date: dayjs(row.bucket).format(groupBy === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD'),
+          date: dayjs(row.bucket).format(
+            effectiveGroupBy === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD'
+          ),
           totalServices: Number(row.total_services),
         }))
       )
