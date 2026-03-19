@@ -4,6 +4,7 @@ import { activeAgent } from 'http/core/agents/active-agent'
 import { authenticate } from 'http/core/agents/authenticate'
 import { getAll } from 'http/core/agents/get-all'
 import { getProfile } from 'http/core/agents/get-profile'
+import { getAllActive } from 'http/core/agents/get-all-active'
 import { inactiveAgent } from 'http/core/agents/inactive-agent'
 import { logoutAgent } from 'http/core/agents/logout-agent'
 import { requestPasswordRecover } from 'http/core/agents/request-password-recover'
@@ -26,6 +27,7 @@ import { updateTypeService } from 'http/core/services/update-type-service'
 import { createAccountService } from '../core/agents/create-account'
 import { getServicesByMonthForChart } from 'http/core/services/get-services-by-month-for-chart'
 import { getAllQuantityServicesPerDay } from 'http/core/services/get-all-quantity-per-day'
+import { analyticsRoutes } from 'http/core/services/analytics'
 
 export async function routes(app: FastifyInstance) {
   // Rotas de agents
@@ -35,6 +37,7 @@ export async function routes(app: FastifyInstance) {
   app.register(requestPasswordRecover)
   app.register(resetPassword)
   app.register(getAll)
+  app.register(getAllActive)
   app.register(updateAgent)
   app.register(inactiveAgent)
   app.register(activeAgent)
@@ -59,4 +62,5 @@ export async function routes(app: FastifyInstance) {
   app.register(getAllQuantityServicesByAgent)
   app.register(getAllQuantityServicesPerDay)
   app.register(getServicesByMonthForChart)
+  app.register(analyticsRoutes)
 }
