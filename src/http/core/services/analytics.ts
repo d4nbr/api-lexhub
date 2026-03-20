@@ -80,17 +80,17 @@ export async function analyticsRoutes(app: FastifyInstance) {
             totals: z.object({
               current: z.object({
                 totalServices: z.number(),
-                completedServices: z.number(),
+                externalServices: z.number(),
                 averageResolutionMinutes: z.number(),
               }),
               previous: z.object({
                 totalServices: z.number(),
-                completedServices: z.number(),
+                externalServices: z.number(),
                 averageResolutionMinutes: z.number(),
               }),
               variation: z.object({
                 totalServices: z.number(),
-                completedServices: z.number(),
+                externalServices: z.number(),
                 averageResolutionMinutes: z.number(),
               }),
             }),
@@ -121,9 +121,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
 
       const [
         currentTotal,
-        currentCompleted,
+        currentExternal,
         previousTotal,
-        previousCompleted,
+        previousExternal,
         currentAvgTimeRows,
         previousAvgTimeRows,
       ] = await Promise.all([
@@ -131,14 +131,14 @@ export async function analyticsRoutes(app: FastifyInstance) {
         prisma.services.count({
           where: {
             ...currentWhere,
-            status: 'COMPLETED',
+            assistance: 'REMOTE',
           },
         }),
         prisma.services.count({ where: previousWhere }),
         prisma.services.count({
           where: {
             ...previousWhere,
-            status: 'COMPLETED',
+            assistance: 'REMOTE',
           },
         }),
         prisma.$queryRaw<Array<{ avg_minutes: number | null }>>(Prisma.sql`
@@ -180,17 +180,17 @@ export async function analyticsRoutes(app: FastifyInstance) {
         totals: {
           current: {
             totalServices: currentTotal,
-            completedServices: currentCompleted,
+            externalServices: currentExternal,
             averageResolutionMinutes: currentAverageResolutionMinutes,
           },
           previous: {
             totalServices: previousTotal,
-            completedServices: previousCompleted,
+            externalServices: previousExternal,
             averageResolutionMinutes: previousAverageResolutionMinutes,
           },
           variation: {
             totalServices: calcVariation(currentTotal, previousTotal),
-            completedServices: calcVariation(currentCompleted, previousCompleted),
+            externalServices: calcVariation(currentExternal, previousExternal),
             averageResolutionMinutes: calcVariation(
               currentAverageResolutionMinutes,
               previousAverageResolutionMinutes
