@@ -291,7 +291,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
           AND s.created_at >= ${start}
           AND s.created_at < ${end}
         WHERE a.inactive IS NULL
+          AND a.name <> 'Gerência de Tecnologia da Informação'
         GROUP BY a.id, a.name
+        HAVING COUNT(s.id) > 0
         ORDER BY total_services DESC, a.name ASC
         LIMIT ${limit}
       `)
@@ -303,6 +305,35 @@ export async function analyticsRoutes(app: FastifyInstance) {
           totalServices: Number(row.total_services),
         }))
       )
+    }
+  )
+
+  app.withTypeProvider<ZodTypeProvider>().get(
+    '/services/analytics/years',
+    {
+      schema: {
+        tags: ['services'],
+        summary: 'Lista anos com dados de atendimento',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.object({
+            years: z.array(z.number()),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      await request.getCurrentAgentId()
+
+      const rows = await prisma.$queryRaw<Array<{ year: number }>>(Prisma.sql`
+        SELECT DISTINCT EXTRACT(YEAR FROM s.created_at)::int AS year
+        FROM services s
+        ORDER BY year DESC
+      `)
+
+      return reply.status(200).send({
+        years: rows.map(row => Number(row.year)),
+      })
     }
   )
 

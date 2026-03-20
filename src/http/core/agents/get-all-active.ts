@@ -33,6 +33,12 @@ export async function getAllActive(app: FastifyInstance) {
         const agents = await prisma.agent.findMany({
           where: {
             inactive: null,
+            name: {
+              not: 'Gerência de Tecnologia da Informação',
+            },
+            services: {
+              some: {},
+            },
           },
           select: {
             id: true,
