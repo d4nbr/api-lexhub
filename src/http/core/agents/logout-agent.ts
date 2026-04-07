@@ -38,10 +38,12 @@ export async function logoutAgent(app: FastifyInstance) {
           )
         }
 
+        const cookieDomain = env.COOKIE_DOMAIN?.trim()
+
         return reply
           .clearCookie('@lexhub-auth', {
             path: '/',
-            domain: env.DOMAIN,
+            ...(cookieDomain ? { domain: cookieDomain } : {}),
           })
           .status(200)
           .send()

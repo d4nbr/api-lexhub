@@ -71,13 +71,15 @@ export async function authenticate(app: FastifyInstance) {
         }
       )
 
+      const cookieDomain = env.COOKIE_DOMAIN?.trim()
+
       return reply
         .setCookie('@lexhub-auth', token, {
           path: '/',
           httpOnly: true,
           secure: env.NODE_ENV === 'production',
           sameSite: 'lax',
-          domain: env.DOMAIN,
+          ...(cookieDomain ? { domain: cookieDomain } : {}),
           maxAge: 60 * 60 * 24, // 1 dia
         })
         .status(201)

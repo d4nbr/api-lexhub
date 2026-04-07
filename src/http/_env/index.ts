@@ -11,7 +11,7 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string(),
   WEB_URL: z.string().url(),
   CORS_ORIGINS: z.string().optional(),
-  DOMAIN: z.string().default('localhost'),
+  COOKIE_DOMAIN: z.string().optional(),
   API_PROTHEUS_DATA_URL: z.string().url(),
   API_PROTHEUS_FIN_URL: z.string().url(),
 })
