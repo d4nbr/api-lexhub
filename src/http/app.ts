@@ -56,10 +56,21 @@ app.register(fastifyJwt, {
   },
 })
 
+const allowedCorsOrigins = (
+  env.CORS_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) ?? [env.WEB_URL]
+)
+
 app.register(fastifyCors, {
-  origin: env.WEB_URL,
+  origin: (origin, cb) => {
+    if (!origin) {
+      cb(null, true)
+      return
+    }
+
+    cb(null, allowedCorsOrigins.includes(origin))
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 })
 

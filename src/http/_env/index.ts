@@ -10,6 +10,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(8),
   RESEND_API_KEY: z.string(),
   WEB_URL: z.string().url(),
+  CORS_ORIGINS: z.string().optional(),
   DOMAIN: z.string().default('localhost'),
   API_PROTHEUS_DATA_URL: z.string().url(),
   API_PROTHEUS_FIN_URL: z.string().url(),
