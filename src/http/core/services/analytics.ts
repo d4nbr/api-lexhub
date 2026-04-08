@@ -370,18 +370,53 @@ export async function analyticsRoutes(app: FastifyInstance) {
           total_services: number
         }>
       >(Prisma.sql`
-        SELECT
-          st.id AS service_type_id,
-          st.name AS service_type_name,
-          COUNT(DISTINCT s.id)::int AS total_services
-        FROM service_types st
-        LEFT JOIN service_service_types sst ON sst.service_type_id = st.id
-        LEFT JOIN services s ON s.id = sst.service_id
-          AND s.created_at >= ${start}
-          AND s.created_at < ${end}
-          ${agentFilter}
-        GROUP BY st.id, st.name
-        ORDER BY total_services DESC, st.name ASC
+        WITH filtered_services AS (
+          SELECT s.id
+          FROM services s
+          WHERE s.created_at >= ${start}
+            AND s.created_at < ${end}
+            ${agentFilter}
+        ),
+        primary_type_per_service AS (
+          SELECT
+            fs.id AS service_id,
+            MIN(sst.service_type_id) AS service_type_id
+          FROM filtered_services fs
+          LEFT JOIN service_service_types sst ON sst.service_id = fs.id
+          GROUP BY fs.id
+        ),
+        typed_counts AS (
+          SELECT
+            st.id AS service_type_id,
+            st.name AS service_type_name,
+            COUNT(pts.service_id)::int AS total_services
+          FROM service_types st
+          LEFT JOIN primary_type_per_service pts ON pts.service_type_id = st.id
+          GROUP BY st.id, st.name
+        ),
+        untyped_count AS (
+          SELECT COUNT(*)::int AS total_services
+          FROM primary_type_per_service pts
+          WHERE pts.service_type_id IS NULL
+        )
+        SELECT *
+        FROM (
+          SELECT
+            tc.service_type_id,
+            tc.service_type_name,
+            tc.total_services
+          FROM typed_counts tc
+
+          UNION ALL
+
+          SELECT
+            'untyped'::text AS service_type_id,
+            'Sem tipo'::text AS service_type_name,
+            uc.total_services
+          FROM untyped_count uc
+        ) result
+        WHERE result.total_services > 0
+        ORDER BY result.total_services DESC, result.service_type_name ASC
       `)
 
       return reply.status(200).send(
