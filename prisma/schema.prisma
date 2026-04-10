@@ -10,17 +10,22 @@ datasource db {
 enum Role {
   ADMIN
   MEMBER
+  SUBSECTION
 }
 
 model Agent {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         Role      @default(MEMBER)
-  inactive     DateTime?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id                   String    @id @default(uuid())
+  name                 String
+  email                String    @unique
+  passwordHash         String    @map("password_hash")
+  role                 Role      @default(MEMBER)
+  canAccessDashboard   Boolean   @default(true) @map("can_access_dashboard")
+  canAccessServices    Boolean   @default(true) @map("can_access_services")
+  canAccessFinancial   Boolean   @default(false) @map("can_access_financial")
+  subsecaoScope        String?   @map("subsecao_scope")
+  inactive             DateTime?
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   tokens   Token[]
   services Services[]

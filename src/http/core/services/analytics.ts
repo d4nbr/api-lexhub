@@ -99,6 +99,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.checkModuleAccess('dashboard')
+
       await request.getCurrentAgentId()
 
       const { year, month, agentId } = request.query
@@ -220,6 +222,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.checkModuleAccess('dashboard')
+
       await request.getCurrentAgentId()
 
       const { year, month, agentId, groupBy } = request.query
@@ -273,6 +277,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.checkModuleAccess('dashboard')
+
       await request.getCurrentAgentId()
 
       const { year, month, limit } = request.query
@@ -323,6 +329,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.checkModuleAccess('dashboard')
+
       await request.getCurrentAgentId()
 
       const rows = await prisma.$queryRaw<Array<{ year: number }>>(Prisma.sql`
@@ -357,6 +365,8 @@ export async function analyticsRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      await request.checkModuleAccess('dashboard')
+
       await request.getCurrentAgentId()
 
       const { year, month, agentId } = request.query

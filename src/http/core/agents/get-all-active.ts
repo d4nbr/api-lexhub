@@ -28,6 +28,8 @@ export async function getAllActive(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('dashboard')
+
         await request.getCurrentAgentId()
 
         const agents = await prisma.agent.findMany({

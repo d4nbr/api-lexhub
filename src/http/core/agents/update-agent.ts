@@ -5,6 +5,8 @@ import { auth } from 'http/middlewares/auth'
 import { prisma } from 'lib/prisma'
 import z from 'zod'
 
+const roleSchema = z.enum(['ADMIN', 'MEMBER', 'SUBSECTION'])
+
 export async function updateAgent(app: FastifyInstance) {
   app
     .withTypeProvider<ZodTypeProvider>()
@@ -22,7 +24,11 @@ export async function updateAgent(app: FastifyInstance) {
           body: z.object({
             name: z.string().optional(),
             email: z.string().email().optional(),
-            role: z.enum(['ADMIN', 'MEMBER']).optional(),
+            role: roleSchema.optional(),
+            canAccessDashboard: z.boolean().optional(),
+            canAccessServices: z.boolean().optional(),
+            canAccessFinancial: z.boolean().optional(),
+            subsecaoScope: z.string().trim().optional().nullable(),
           }),
           response: {
             204: z.null(),
@@ -30,11 +36,18 @@ export async function updateAgent(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
-        // Somente administradores podem listar todos os funcionários
         await request.checkIfAgentIsAdmin()
 
         const { id } = request.params
-        const { name, email, role } = request.body
+        const {
+          name,
+          email,
+          role,
+          canAccessDashboard,
+          canAccessServices,
+          canAccessFinancial,
+          subsecaoScope,
+        } = request.body
 
         const agent = await prisma.agent.findUnique({
           where: { id },
@@ -46,9 +59,7 @@ export async function updateAgent(app: FastifyInstance) {
           )
         }
 
-        // Verifica se o e-mail que está tentando alterar já existe
         if (email && email !== agent.email) {
-          // Busca se o e-mail já existe no banco
           const emailExists = await prisma.agent.findUnique({
             where: { email },
           })
@@ -60,6 +71,30 @@ export async function updateAgent(app: FastifyInstance) {
           }
         }
 
+        const resolvedRole = role ?? agent.role
+        const normalizedScope = subsecaoScope?.trim().toUpperCase() || null
+
+        if (resolvedRole === 'SUBSECTION' && !normalizedScope) {
+          throw new UnauthorizedError(
+            'Para o perfil Subseção, selecione a seccional/subseção vinculada.'
+          )
+        }
+
+        const resolvedPermissions =
+          resolvedRole === 'ADMIN'
+            ? {
+                canAccessDashboard: true,
+                canAccessServices: true,
+                canAccessFinancial: true,
+              }
+            : {
+                canAccessDashboard:
+                  canAccessDashboard ?? agent.canAccessDashboard,
+                canAccessServices: canAccessServices ?? agent.canAccessServices,
+                canAccessFinancial:
+                  canAccessFinancial ?? agent.canAccessFinancial,
+              }
+
         try {
           await prisma.agent.update({
             where: {
@@ -69,12 +104,15 @@ export async function updateAgent(app: FastifyInstance) {
               name,
               email,
               role,
+              ...resolvedPermissions,
+              subsecaoScope:
+                resolvedRole === 'SUBSECTION' ? normalizedScope : null,
               updatedAt: new Date(),
             },
           })
 
           return reply.status(204).send()
-        } catch (err) {
+        } catch {
           throw new UnauthorizedError(
             'Falha na atualização. Verifique os dados e tente novamente.'
           )

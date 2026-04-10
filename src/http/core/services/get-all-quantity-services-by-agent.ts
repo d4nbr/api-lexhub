@@ -29,6 +29,8 @@ export async function getAllQuantityServicesByAgent(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const { id } = request.params

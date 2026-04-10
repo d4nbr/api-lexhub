@@ -44,7 +44,7 @@ export async function getAllServices(app: FastifyInstance) {
                     id: z.string().uuid(),
                     name: z.string(),
                     email: z.string(),
-                    role: z.enum(['ADMIN', 'MEMBER']),
+                    role: z.enum(['ADMIN', 'MEMBER', 'SUBSECTION']),
                   }),
                   serviceTypes: z.array(
                     z.object({
@@ -62,6 +62,8 @@ export async function getAllServices(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const { pageIndex, oab, lawyerName, agentName, assistance, status } =

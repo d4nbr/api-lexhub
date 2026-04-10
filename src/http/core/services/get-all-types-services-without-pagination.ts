@@ -31,6 +31,8 @@ export async function getAllTypesServicesWithoutPagination(
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const servicesTypes = await prisma.serviceTypes.findMany({

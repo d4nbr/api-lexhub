@@ -19,7 +19,7 @@ export async function getAll(app: FastifyInstance) {
           querystring: z.object({
             pageIndex: z.coerce.number().default(1),
             name: z.string().optional(),
-            role: z.enum(['ADMIN', 'MEMBER']).optional(),
+            role: z.enum(['ADMIN', 'MEMBER', 'SUBSECTION']).optional(),
           }),
           response: {
             200: z.object({
@@ -28,7 +28,11 @@ export async function getAll(app: FastifyInstance) {
                   id: z.string().uuid(),
                   name: z.string(),
                   email: z.string().email(),
-                  role: z.enum(['ADMIN', 'MEMBER']),
+                  role: z.enum(['ADMIN', 'MEMBER', 'SUBSECTION']),
+                  canAccessDashboard: z.boolean(),
+                  canAccessServices: z.boolean(),
+                  canAccessFinancial: z.boolean(),
+                  subsecaoScope: z.string().nullable(),
                   inactive: z.date().nullable(),
                 })
               ),
@@ -57,6 +61,10 @@ export async function getAll(app: FastifyInstance) {
                 name: true,
                 email: true,
                 role: true,
+                canAccessDashboard: true,
+                canAccessServices: true,
+                canAccessFinancial: true,
+                subsecaoScope: true,
                 inactive: true,
               },
               orderBy: {

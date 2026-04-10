@@ -9,6 +9,8 @@ import { resend } from 'lib/resend'
 import { AgentRegistrationEmail } from 'utils/emails/agent-registration-email'
 import { z } from 'zod'
 
+const roleSchema = z.enum(['ADMIN', 'MEMBER', 'SUBSECTION'])
+
 export async function createAccountService(app: FastifyInstance) {
   app
     .withTypeProvider<ZodTypeProvider>()
@@ -24,6 +26,11 @@ export async function createAccountService(app: FastifyInstance) {
             name: z.string(),
             email: z.string().email(),
             password: z.string().min(8),
+            role: roleSchema.default('MEMBER'),
+            canAccessDashboard: z.boolean().optional(),
+            canAccessServices: z.boolean().optional(),
+            canAccessFinancial: z.boolean().optional(),
+            subsecaoScope: z.string().trim().optional().nullable(),
           }),
           response: {
             201: z.null(),
@@ -31,10 +38,18 @@ export async function createAccountService(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
-        // Somente admins podem criar um novo funcionário
         await request.checkIfAgentIsAdmin()
 
-        const { name, email, password } = request.body
+        const {
+          name,
+          email,
+          password,
+          role,
+          canAccessDashboard,
+          canAccessServices,
+          canAccessFinancial,
+          subsecaoScope,
+        } = request.body
 
         const userWithSameEmail = await prisma.agent.findUnique({
           where: {
@@ -48,10 +63,30 @@ export async function createAccountService(app: FastifyInstance) {
           )
         }
 
+        const normalizedScope = subsecaoScope?.trim().toUpperCase() || null
+
+        if (role === 'SUBSECTION' && !normalizedScope) {
+          throw new BadRequestError(
+            'Para o perfil Subseção, selecione a seccional/subseção vinculada.'
+          )
+        }
+
         const passwordHash = await hash(password, 8)
 
+        const resolvedPermissions =
+          role === 'ADMIN'
+            ? {
+                canAccessDashboard: true,
+                canAccessServices: true,
+                canAccessFinancial: true,
+              }
+            : {
+                canAccessDashboard: canAccessDashboard ?? false,
+                canAccessServices: canAccessServices ?? false,
+                canAccessFinancial: canAccessFinancial ?? false,
+              }
+
         try {
-          // Envia email de boas vindas para o novo funcionário com seus dados
           await resend.emails.send({
             from: '📧 OAB Atende <oabatende@oabma.com.br>',
             to: email,
@@ -69,11 +104,14 @@ export async function createAccountService(app: FastifyInstance) {
               name,
               email,
               passwordHash,
+              role,
+              ...resolvedPermissions,
+              subsecaoScope: role === 'SUBSECTION' ? normalizedScope : null,
             },
           })
 
           return reply.status(201).send()
-        } catch (err) {
+        } catch {
           throw new BadRequestError(
             'Erro ao criar funcionário. Por favor, tente novamente.'
           )

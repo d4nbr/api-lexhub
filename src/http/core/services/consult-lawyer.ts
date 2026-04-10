@@ -35,6 +35,8 @@ export async function consultLawyer(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const { oab } = request.body

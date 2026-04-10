@@ -25,6 +25,8 @@ export async function getAllQuantityServicesInMonth(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         // Obtém a data atual

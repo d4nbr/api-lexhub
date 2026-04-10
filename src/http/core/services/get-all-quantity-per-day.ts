@@ -25,6 +25,8 @@ export async function getAllQuantityServicesPerDay(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const now = dayjs()

@@ -34,6 +34,8 @@ export async function getServicesByMonthForChart(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         try {

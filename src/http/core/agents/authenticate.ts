@@ -60,9 +60,24 @@ export async function authenticate(app: FastifyInstance) {
       // Criação do token de autenticação
       const token = await reply.jwtSign(
         {
-          // Envia o id do usuário para o token
           sub: userFromEmail.id,
           role: userFromEmail.role,
+          canAccessDashboard:
+            userFromEmail.role === 'ADMIN'
+              ? true
+              : userFromEmail.canAccessDashboard,
+          canAccessServices:
+            userFromEmail.role === 'ADMIN'
+              ? true
+              : userFromEmail.canAccessServices,
+          canAccessFinancial:
+            userFromEmail.role === 'ADMIN'
+              ? true
+              : userFromEmail.canAccessFinancial,
+          subsecaoScope:
+            userFromEmail.role === 'SUBSECTION'
+              ? userFromEmail.subsecaoScope
+              : null,
         },
         {
           sign: {

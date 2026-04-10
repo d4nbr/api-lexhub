@@ -32,6 +32,8 @@ export async function createServiceExternal(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         const agentId = await request.getCurrentAgentId()
 
         const { oab, name, email, serviceTypeId, observation, assistance } =

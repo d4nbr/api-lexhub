@@ -22,7 +22,11 @@ export async function getProfile(app: FastifyInstance) {
                 id: z.string().uuid(),
                 name: z.string(),
                 email: z.string().email(),
-                role: z.enum(['ADMIN', 'MEMBER']),
+                role: z.enum(['ADMIN', 'MEMBER', 'SUBSECTION']),
+                canAccessDashboard: z.boolean(),
+                canAccessServices: z.boolean(),
+                canAccessFinancial: z.boolean(),
+                subsecaoScope: z.string().nullable(),
               }),
             }),
           },
@@ -41,6 +45,10 @@ export async function getProfile(app: FastifyInstance) {
             name: true,
             email: true,
             role: true,
+            canAccessDashboard: true,
+            canAccessServices: true,
+            canAccessFinancial: true,
+            subsecaoScope: true,
           },
         })
 

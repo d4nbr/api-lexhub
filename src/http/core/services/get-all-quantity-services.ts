@@ -24,6 +24,8 @@ export async function getAllQuantityServices(app: FastifyInstance) {
         },
       },
       async (request, reply) => {
+        await request.checkModuleAccess('services')
+
         await request.getCurrentAgentId()
 
         const services = await prisma.services.count()
